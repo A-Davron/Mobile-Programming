@@ -202,22 +202,120 @@
 
 
 // Problem 3.3
-// void main () {
-//     int num = 0;
-//     int factorial = 1;
-//     for(int i = 1; i<=num; i++){
-//         factorial = factorial * i;
-//     }
-//     print (factorial);
+// void main() {
+//   int num = 5;
+//   int factorial = 1;
+//   for (int i = 1; i <= num; i++) {
+//     factorial = factorial * i;
+//   }
+//   print(factorial);
+
+
+//   factorial = 1;
+//   List<int> numbers = [1, 2, 3, 4, 5];
+//   for (int i in numbers) {
+//     factorial = factorial * i;
+//   }
+//   print(factorial);
 // }
 
 
-// Problem 3.3
-// void main () {
-//     int num = 0;
-//     int factorial = 1;
-//     for(int i = 1; i<=num; i++){
-//         factorial = factorial * i;
+// Problem 3.4
+// void main() {
+//   int target = 5;
+//   int guess = 1;
+//   while (true) {
+//     print('Guess: $guess');
+//     if (guess == target) {
+//       print('You guessed it!');
+//       break;
 //     }
-//     print (factorial);
+//     guess++;
+//   }
+// }
+
+
+// Problem 3.5
+// break
+// void main() {
+//   for (int i = 1; i <= 3; i++) {
+//     for (int j = 1; j <= 3; j++) {
+//       if (j == 2) {
+//         break;
+//       }
+//       print('$i $j');
+//     }
+//   }
+// }
+
+// continue
+// void main() {
+//   for (int i = 1; i <= 2; i++) {
+//     for (int j = 1; j <= 3; j++) {
+//       if (j == 2) {
+//         continue;
+//       }
+//       print('$i $j');
+//     }
+//   }
+// }
+
+
+// Problem 4.1
+// double calculateTotal(
+//   double price, {
+//   double discount = 0.0,
+//   double tax = 0.08,
+// }) {
+//   double discounted = price * (1 - discount);
+//   return discounted * (1 + tax);
+// }
+
+// void main() {
+//   print(
+//     'Total: \$${calculateTotal(100.0, discount: 0.15).toStringAsFixed(2)}',
+//   );
+// }
+
+
+// Problem 4.2
+// bool isEven(int n) => n % 2 == 0;
+// void main() {
+//   print(isEven(4));
+// }
+
+
+// Problem 4.3
+// String formatName(String name, [String? prefix, String? suffix]) {
+//   return '${prefix ?? ''}$name${suffix ?? ''}';
+// }
+// void main() {
+//   print(formatName('John', 'Mr. ', ' Jr.'));
+// }
+
+
+// Problem 4.5
+// int fibonacci(int n) {
+//   if (n <= 1) {
+//     return n;
+//   }
+//   return fibonacci(n - 1) + fibonacci(n - 2);
+// }
+// void main() {
+//   print(fibonacci(6));
+// }
+
+
+// Problem 4.6
+// void main() {
+//   int counter = 0;
+
+//   var count = () {
+//     counter++;
+//     return counter;
+//   };
+  
+//   print(count());
+//   print(count());
+//   print(count());
 // }
