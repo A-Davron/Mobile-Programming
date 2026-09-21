@@ -1,0 +1,33 @@
+
+import 'dart:io';
+void main (List <String > arguments ) {
+    print ('Hello , Dart World !');
+    print ('Abidov Davron \nStudent ID: 240471 \nMajor: Computer Science \n');
+
+    if ( arguments.isNotEmpty ) {
+        print ('Command line arguments passed : ${ arguments . join (", ")}');  
+    }
+    else {
+        var count = arguments.length;
+        print ('Number of arguments: ${count}');
+    }
+    // double sum = 0;
+
+    // for (String arg in arguments) {
+    //     sum += double.parse(arg);
+    // }
+
+    // double average = sum / arguments.length;
+    // print('Average: ${average}');
+
+    if (arguments.length != 2) {
+        print('More than 2 arguments');
+        exitCode = 1;
+        return;
+    }
+
+    print('First argument: ${arguments[0]}');
+    print('Second argument: ${arguments[1]}');
+    print('Arguments are valid.');
+    exitCode = 0;
+}
