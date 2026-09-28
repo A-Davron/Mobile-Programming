@@ -75,6 +75,64 @@
 // }
 
 
+// Problem 5.5
+/// A simple animal class.
+// class Animal {
+  /// Makes the animal sound.
+  // void sound() {
+  //   print("Animal sound");
+  // }
+
+  /// Old method. Use [sound] instead.
+//   @deprecated
+//   void oldSound() {
+//     print("Old sound");
+//   }
+// }
+
+/// A dog is an animal.
+// class Dog extends Animal {
+  /// Overrides the [sound] method.
+//   @override
+//   void sound() {
+//     print("Dog barks");
+//   }
+// }
+
+// void main() {
+//   Dog dog = Dog();
+
+//   dog.sound();
+// }
+
+
+// Problem 5.6
+/// Represents a student.
+// class Student {
+  /// The student's name.
+  // String name;
+
+  /// The student's age.
+  // int age;
+
+  /// Creates a student.
+  // Student(this.name, this.age);
+
+  /// Displays student information.
+//   void display() {
+//     print("Name: $name");
+//     print("Age: $age");
+//   }
+// }
+
+// void main() {
+//   Student student = Student("Ali", 20);
+
+//   student.display();
+// }
+
+
+
 // Problem 6.2
 // class Person {
 //   String name;
@@ -122,6 +180,57 @@
 //   Singleton second = Singleton();
 
 //   print(identical(first, second));
+// }
+
+
+// Problem 6.5
+// class Student {
+//   String _name = "";
+//   int _age = 0;
+
+//   String get name => _name;
+
+//   set name(String value) {
+//     if (value.isEmpty) {
+//       throw Exception("Name cannot be empty");
+//     }
+//     _name = value;
+//   }
+
+//   int get age => _age;
+
+//   set age(int value) {
+//     if (value < 0) {
+//       throw Exception("Age cannot be negative");
+//     }
+//     _age = value;
+//   }
+// }
+
+// void main() {
+//   Student student = Student();
+
+//   student.name = "Ali";
+//   student.age = 20;
+
+//   print(student.name);
+//   print(student.age);
+// }
+
+
+// Problem 6.6
+// class StudentData {
+//   final String name;
+//   final int age;
+
+//   const StudentData(this.name, this.age);
+// }
+
+// void main() {
+//   const student = StudentData("Ali", 20);
+
+//   print(student.name);
+//   print(student.age);
 // }
 
 
