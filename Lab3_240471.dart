@@ -306,6 +306,48 @@
 // }
 
 
+// Problem 7.5
+// enum Color {
+//   red,
+//   green,
+//   blue,
+// }
+
+// void main() {
+//   String value = "green";
+
+//   try {
+//     Color color = Color.values.byName(value);
+//     print(color);
+//   } catch (e) {
+//     print("Invalid color");
+//   }
+// }
+
+
+// Problem 7.6
+// enum Level {
+//   low(1),
+//   medium(2),
+//   high(3);
+//   final int value;
+//   const Level(this.value);
+
+//   static Level fromValue(int value) {
+//     return Level.values.firstWhere(
+//       (level) => level.value == value,
+//     );
+//   }
+// }
+
+// void main() {
+//   Level level = Level.high;
+//   print(level.value);
+//   Level result = Level.fromValue(2);
+//   print(result);
+// }
+
+
 
 // Problem 8.2
 // class Animal {
@@ -369,6 +411,41 @@
 //   triangle.showShape();
 //   triangle.showPolygon();
 //   triangle.showTriangle();
+// }
+
+
+// Problem 8.5
+// abstract class Animal {
+//   void eat() {
+//     print("Animal is eating");
+//   }
+//   void sound();
+// }
+
+// class Dog extends Animal {
+//   @override
+//   void sound() {
+//     print("Dog barks");
+//   }
+// }
+
+// void main() {
+//   Dog dog = Dog();
+//   dog.eat();
+//   dog.sound();
+// }
+
+
+// Problem 8.6
+// final class Animal {
+//   void sound() {
+//     print("Animal sound");
+//   }
+// }
+
+// void main() {
+//   Animal animal = Animal();
+//   animal.sound();
 // }
 
 
@@ -442,6 +519,65 @@
 //   duck.swim();
 //   duck.fly();
 // }
+
+
+// Problem 9.5
+// class Animal {
+//   void eat() {
+//     print("Eating");
+//   }
+// }
+
+// mixin Fly on Animal {
+//   void fly() {
+//     print("Flying");
+//   }
+// }
+
+// class Bird extends Animal with Fly {
+// }
+
+// void main() {
+//   Bird bird = Bird();
+//   bird.eat();
+//   bird.fly();
+// }
+
+
+// Problem 9.6
+// Implements
+// abstract class Animal {
+//   void sound();
+// }
+
+// class Dog implements Animal {
+//   @override
+//   void sound() {
+//     print("Dog barks");
+//   }
+// }
+
+// void main() {
+//   Dog dog = Dog();
+//   dog.sound();
+// }
+
+
+// With
+// mixin Fly {
+//   void fly() {
+//     print("Flying");
+//   }
+// }
+
+// class Bird with Fly {
+// }
+
+// void main() {
+//   Bird bird = Bird();
+//   bird.fly();
+// }
+
 
 
 // Problem 10.2
@@ -535,6 +671,57 @@
 // }
 
 
+// Problem 10.5
+// sealed class Shape {}
+// class Circle extends Shape {}
+// class Square extends Shape {}
+
+// String getShape(Shape shape) {
+//   return switch (shape) {
+//     Circle() => "Circle",
+//     Square() => "Square",
+//   };
+// }
+
+// void main() {
+//   Shape shape = Circle();
+//   print(getShape(shape));
+// }
+
+
+// Problem 10.6
+// abstract class Payment {
+//   void pay();
+// }
+
+// class CashPayment implements Payment {
+//   @override
+//   void pay() {
+//     print("Paying with cash");
+//   }
+// }
+
+// class CardPayment implements Payment {
+//   @override
+//   void pay() {
+//     print("Paying with card");
+//   }
+// }
+
+// class Shop {
+//   final Payment payment;
+//   Shop(this.payment);
+//   void checkout() {
+//     payment.pay();
+//   }
+// }
+
+// void main() {
+//   Shop shop = Shop(CardPayment());
+//   shop.checkout();
+// }
+
+
 // Problem 11.2
 // Future<String> getUserData() async {
 //   await Future.delayed(Duration(seconds: 2));
@@ -545,4 +732,160 @@
 //   print('Looking up user...');
 //   String user = await getUserData();
 //   print(user);
+// }
+
+
+// Problem 11.3
+// Future<String> task1() async {
+//   await Future.delayed(Duration(seconds: 2));
+//   return "Task 1 completed";
+// }
+
+// Future<String> task2() async {
+//   await Future.delayed(Duration(seconds: 1));
+//   return "Task 2 completed";
+// }
+
+// Future<String> task3() async {
+//   await Future.delayed(Duration(seconds: 3));
+//   return "Task 3 completed";
+// }
+
+// void main() async {
+//   List<String> results = await Future.wait([
+//     task1(),
+//     task2(),
+//     task3(),
+//   ]);
+
+//   print(results);
+// }
+
+
+// Problem 11.4
+// import 'dart:async';
+// void main() {
+//   int count = 0;
+//   StreamSubscription? subscription;
+//   subscription = Stream.periodic(
+//     Duration(seconds: 1),
+//     (value) => value,
+//   ).listen((value) {
+//     print("Tick: $value");
+//     count++;
+//     if (count == 5) {
+//       subscription?.cancel();
+//       print("Stream cancelled");
+//     }
+//   });
+// }
+
+
+// Problem 11.5
+// void main() {
+//   Stream<int>.fromIterable([1, 2, 2, 3, 4, 4, 5])
+//       .map((value) => value * 2)
+//       .where((value) => value > 4)
+//       .distinct()
+//       .listen((value) {
+//     print(value);
+//   });
+// }
+
+
+// Problem 11.6
+// Stream<int> getNumbers() async* {
+//   yield 1;
+//   yield 2;
+//   throw Exception("Something went wrong");
+// }
+
+// void main() {
+//   getNumbers()
+//       .handleError((error) {
+//         print("Error: $error");
+//       })
+//       .listen((value) {
+//         print("Value: $value");
+//       });
+// }
+
+
+// Problem 12.2
+// double divide(double a, double b) {
+//   try {
+//     if (b == 0) {
+//       throw UnsupportedError("Cannot divide by zero");
+//     }
+
+//     return a / b;
+//   } on UnsupportedError catch (e) {
+//     print(e);
+//     return 0;
+//   }
+// }
+
+// void main() {
+//   print(divide(10, 2));
+//   print(divide(10, 0));
+// }
+
+
+// Problem 12.3
+// void checkName(String? name) {
+//   if (name == null || name.isEmpty) {
+//     throw ArgumentError("Name cannot be empty or null");
+//   }
+
+//   print("Name: $name");
+// }
+
+// void main() {
+//   checkName("Ali");
+// }
+
+
+// Problem 12.4
+// void main() {
+//   try {
+//     int result = 10 ~/ 0;
+//     print(result);
+//   } on IntegerDivisionByZeroException {
+//     print("Cannot divide by zero");
+//   } catch (e) {
+//     print("Unknown error: $e");
+//   }
+// }
+
+
+// Problem 12.5
+// void main() {
+//   try {
+//     int result = 10 ~/ 0;
+//     print(result);
+//   } catch (e, stackTrace) {
+//     print("Error: $e");
+//     print("Stack trace:");
+//     print(stackTrace);
+//   }
+// }
+
+
+// Problem 12.6
+// void test() {
+//   try {
+//     int result = 10 ~/ 0;
+//     print(result);
+//   } catch (e) {
+//     print("Error caught");
+//     rethrow;
+//   }
+// }
+
+// void main() {
+//   try {
+//     test();
+//   } catch (e) {
+//     print("Error received in main: $e");
+//   }
 // }
