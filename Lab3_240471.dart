@@ -424,3 +424,16 @@
 //   numbers.add(20);
 //   numbers.showAll();
 // }
+
+
+// Problem 11.2
+// Future<String> getUserData() async {
+//   await Future.delayed(Duration(seconds: 2));
+//   return 'User: Davron, Age: 20';
+// }
+
+// void main() async {
+//   print('Looking up user...');
+//   String user = await getUserData();
+//   print(user);
+// }
