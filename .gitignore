@@ -1,0 +1,7 @@
+# IDE
+.idea/
+*.iml
+
+# Dart / Flutter
+.dart_tool/
+build/
