@@ -5,7 +5,7 @@
 Line counts are `wc -l` over each style's own files — the sample from the lab
 sheet plus everything T1-T5 added, comments included. The shared
 `models/cart.dart` and `widgets/cart_body.dart` are excluded: they are written
-once and reused by all four.
+once and reused by all four
 
 | Style | Files | LOC T1-T5 | Test LOC | Tests | Strength | Weakness |
 | --- | --- | --- | --- | --- | --- | --- |
