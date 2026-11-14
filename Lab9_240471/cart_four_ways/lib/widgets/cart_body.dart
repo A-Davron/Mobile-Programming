@@ -11,6 +11,7 @@ class CartBody extends StatelessWidget {
     required this.onQtyChanged,
     required this.onCouponApplied,
     required this.onCheckout,
+    this.summary,
   });
 
   final CartState state;
@@ -19,6 +20,10 @@ class CartBody extends StatelessWidget {
   final void Function(String productId, int delta) onQtyChanged;
   final void Function(String code) onCouponApplied;
   final VoidCallback onCheckout;
+
+  /// T3: a style may supply its own summary that subscribes on its own (the
+  /// Riverpod `ConsumerWidget`). When null, it is built from [state].
+  final Widget? summary;
 
   @override
   Widget build(BuildContext context) {
@@ -73,7 +78,7 @@ class CartBody extends StatelessWidget {
           error: state.couponError,
           onApply: onCouponApplied,
         ),
-        _SummaryCard(state: state),
+        summary ?? CartSummaryCard(totals: CartTotals.of(state)),
         Padding(
           padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
           child: SizedBox(
@@ -155,11 +160,12 @@ class _CouponFieldState extends State<_CouponField> {
   );
 }
 
-/// T3: reads getters off `CartState`; it stores nothing itself.
-class _SummaryCard extends StatelessWidget {
-  const _SummaryCard({required this.state});
+/// T3: takes the four derived values as arguments and stores nothing itself,
+/// so every style can feed it from wherever its state lives.
+class CartSummaryCard extends StatelessWidget {
+  const CartSummaryCard({super.key, required this.totals});
 
-  final CartState state;
+  final CartTotals totals;
 
   @override
   Widget build(BuildContext context) => Card(
@@ -168,10 +174,10 @@ class _SummaryCard extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Column(
         children: [
-          _row('Items', '${state.itemCount}'),
-          _row('Subtotal', state.subtotal.toStringAsFixed(2)),
-          _row('Discount', '-${state.discount.toStringAsFixed(2)}'),
-          _row('Total', state.total.toStringAsFixed(2)),
+          _row('Items', '${totals.itemCount}'),
+          _row('Subtotal', totals.subtotal.toStringAsFixed(2)),
+          _row('Discount', '-${totals.discount.toStringAsFixed(2)}'),
+          _row('Total', totals.total.toStringAsFixed(2)),
         ],
       ),
     ),

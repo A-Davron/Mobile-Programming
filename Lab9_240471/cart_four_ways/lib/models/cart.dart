@@ -20,6 +20,16 @@ class CartLine {
 
   CartLine copyWith({int? qty}) =>
       CartLine(product: product, qty: qty ?? this.qty);
+
+  /// T2 (Riverpod): `CartState ==` compares lines element-wise, so a line needs
+  /// value equality too. Products come from the const [catalog], so comparing
+  /// `product.id` is enough.
+  @override
+  bool operator ==(Object other) =>
+      other is CartLine && other.product.id == product.id && other.qty == qty;
+
+  @override
+  int get hashCode => Object.hash(product.id, qty);
 }
 
 /// Pure, style-independent cart logic. Every state holder calls these.
@@ -71,6 +81,7 @@ class CartState {
     this.status = CheckoutStatus.idle,
     this.orderId,
     this.checkoutError,
+    this.canUndo = false,
   });
 
   final List<CartLine> lines;
@@ -80,11 +91,49 @@ class CartState {
   final String? orderId;
   final String? checkoutError;
 
+  /// T5 (Cubit/Bloc): a getter on the cubit is not observable by `BlocBuilder`,
+  /// so whether undo is possible has to be part of the state itself. The
+  /// `setState` and Riverpod pages keep their own history and leave this false.
+  final bool canUndo;
+
   /// T3: derived values are getters, never stored fields.
   int get itemCount => lines.itemCount;
   double get subtotal => lines.subtotal;
   double get discount => coupon == kCouponCode ? subtotal * 0.10 : 0;
   double get total => subtotal - discount;
+
+  /// T2 (Riverpod): without this, every `copyWith` produces a new instance that
+  /// is `!=` the old one, so assigning an unchanged value still notifies.
+  @override
+  bool operator ==(Object other) =>
+      other is CartState &&
+      _sameLines(other.lines, lines) &&
+      other.coupon == coupon &&
+      other.couponError == couponError &&
+      other.status == status &&
+      other.orderId == orderId &&
+      other.checkoutError == checkoutError &&
+      other.canUndo == canUndo;
+
+  @override
+  int get hashCode => Object.hash(
+    Object.hashAll(lines),
+    coupon,
+    couponError,
+    status,
+    orderId,
+    checkoutError,
+    canUndo,
+  );
+
+  static bool _sameLines(List<CartLine> a, List<CartLine> b) {
+    if (identical(a, b)) return true;
+    if (a.length != b.length) return false;
+    for (var i = 0; i < a.length; i++) {
+      if (a[i] != b[i]) return false;
+    }
+    return true;
+  }
 
   CartState copyWith({
     List<CartLine>? lines,
@@ -93,6 +142,7 @@ class CartState {
     CheckoutStatus? status,
     Object? orderId = _unset,
     Object? checkoutError = _unset,
+    bool? canUndo,
   }) => CartState(
     lines: lines ?? this.lines,
     coupon: identical(coupon, _unset) ? this.coupon : coupon as String?,
@@ -104,8 +154,43 @@ class CartState {
     checkoutError: identical(checkoutError, _unset)
         ? this.checkoutError
         : checkoutError as String?,
+    canUndo: canUndo ?? this.canUndo,
   );
 }
 
 /// The only coupon the catalogue accepts: 10 % off.
 const kCouponCode = 'SAVE10';
+
+/// T3: the four derived values bundled into one comparable value, so a
+/// selector (Riverpod `select`, `BlocSelector`) can compare them in one go.
+class CartTotals {
+  const CartTotals({
+    required this.itemCount,
+    required this.subtotal,
+    required this.discount,
+    required this.total,
+  });
+
+  factory CartTotals.of(CartState s) => CartTotals(
+    itemCount: s.itemCount,
+    subtotal: s.subtotal,
+    discount: s.discount,
+    total: s.total,
+  );
+
+  final int itemCount;
+  final double subtotal;
+  final double discount;
+  final double total;
+
+  @override
+  bool operator ==(Object other) =>
+      other is CartTotals &&
+      other.itemCount == itemCount &&
+      other.subtotal == subtotal &&
+      other.discount == discount &&
+      other.total == total;
+
+  @override
+  int get hashCode => Object.hash(itemCount, subtotal, discount, total);
+}
