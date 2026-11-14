@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'bloc/cart_page_bloc.dart';
@@ -6,7 +7,25 @@ import 'cubit/cart_page_cubit.dart';
 import 'riverpod/cart_page_riverpod.dart';
 import 'setstate/cart_page_setstate.dart';
 
+/// Part 5 T2: prints `currentState -> event -> nextState` for every bloc and
+/// cubit. A cubit has no event, so its transitions never appear here — only
+/// `CartCubit.onChange` does.
+class LoggingBlocObserver extends BlocObserver {
+  @override
+  void onTransition(
+    Bloc<dynamic, dynamic> bloc,
+    Transition<dynamic, dynamic> transition,
+  ) {
+    super.onTransition(bloc, transition);
+    debugPrint(
+      '[${bloc.runtimeType}] ${transition.event.runtimeType} → total='
+      '${(transition.nextState as dynamic).total}',
+    );
+  }
+}
+
 void main() {
+  Bloc.observer = LoggingBlocObserver();
   // ProviderScope at the root so the Riverpod part (Part 3) has a container.
   runApp(const ProviderScope(child: MainApp()));
 }
