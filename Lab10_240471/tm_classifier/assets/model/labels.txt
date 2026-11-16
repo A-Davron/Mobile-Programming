@@ -1,0 +1,6 @@
+0 Phone
+1 Notebook
+2 Zayniddin
+3 Magic mouse
+4 Wallet
+5 Arm
