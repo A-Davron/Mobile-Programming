@@ -24,6 +24,10 @@
 	<string>????</string>
 	<key>CFBundleVersion</key>
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
+	<key>NSCameraUsageDescription</key>
+	<string>This app uses the camera to photograph an object so it can be recognised by the on-device model. Photos are not uploaded anywhere.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>This app reads a photo you choose from your library so it can be recognised by the on-device model. Photos are not uploaded anywhere.</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>UIApplicationSceneManifest</key>
