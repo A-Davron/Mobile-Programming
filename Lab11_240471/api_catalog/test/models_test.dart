@@ -53,7 +53,7 @@ void main() {
 
     expect(page.products, hasLength(2));
     expect(page.products.first.title, 'Essence Mascara Lash Princess');
-    expect(page.total, 194);
+    expect(page.total, 194);  
     expect(page.skip, 0);
     expect(page.limit, 2);
   });
