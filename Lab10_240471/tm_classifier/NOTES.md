@@ -353,3 +353,176 @@ would repeat the parsing, and if the two ever disagreed the screen would be
 documenting something the classifier is not doing. It is also free: the list is
 already in memory and the Model screen already receives the classifier by
 constructor injection.
+
+## Part 5 — Three sources, one result
+
+`lib/services/image_sources.dart` has the three sources. Each one only delivers
+a `Uint8List`; no file path leaves the class.
+
+- **Camera (T18):** `fromCamera()` calls `pickImage(source: ImageSource.camera, maxWidth: 1024)`.
+- **Gallery (T19):** `fromGallery()` is the same call with `ImageSource.gallery`.
+- **Download (T20):** `fromUrl(url, onProgress:)` sends a streamed `GET`, so the
+  dialog (`lib/widgets/download_dialog.dart`) shows a real progress bar when
+  the server sends a `content-length`. The answer is accepted only when the
+  status is `200` **and** `content-type` starts with `image/`. Every failure
+  becomes an `ImageSourceException` with a sentence for the user:
+
+  | Case | Message |
+  | --- | --- |
+  | Not a URL | "That is not a web address. It should start with https://" |
+  | 404 / other status | "Nothing was found at that address (error 404)." / "The server answered with error N." |
+  | Web page instead of a picture | "That address is a web page, not a picture. Open the image itself and copy its address." |
+  | No network | "No connection to that address. Check the internet and the address." |
+  | Timeout (15 s) | "The download took too long. Check the connection and try again." |
+
+  Errors stay inside the dialog so the address can be fixed and retried.
+  `test/image_sources_test.dart` covers every row with a `MockClient`.
+  The other route — saving a picture from the phone's browser and picking it
+  through **Choose from gallery** — needs no extra code: it is the gallery source.
+
+Cancelling the camera, the gallery or the download dialog returns `null`, and
+`HomeShell._classify` simply returns: no error, no navigation.
+
+**One path (T21/T22).** All three sources call the same
+`HomeShell._classify(origin, loadBytes)`: bytes → `Classifier.classify` →
+`SessionHistory.add` → push `ResultScreen`. Result is one widget for every
+source; History stores the bytes and the predictions, so tapping an entry
+reopens Result without running the model again.
+
+### T23 — evaluation
+
+> **TODO:** fill in on the phone. Three new pictures per class (not training
+> samples), using all three sources across the test.
+
+| # | Source | Expected | Predicted | % | Correct |
+| --- | --- | --- | --- | --- | --- |
+| 1 | Camera | Phone | | | |
+| 2 | Gallery | Phone | | | |
+| 3 | Download | Phone | | | |
+| 4 | Camera | Notebook | | | |
+| 5 | Gallery | Notebook | | | |
+| 6 | Download | Notebook | | | |
+| 7 | Camera | Zayniddin | | | |
+| 8 | Gallery | Zayniddin | | | |
+| 9 | Download | Zayniddin | | | |
+| 10 | Camera | Magic mouse | | | |
+| 11 | Gallery | Magic mouse | | | |
+| 12 | Download | Magic mouse | | | |
+| 13 | Camera | Wallet | | | |
+| 14 | Gallery | Wallet | | | |
+| 15 | Download | Wallet | | | |
+| 16 | Camera | Arm | | | |
+| 17 | Gallery | Arm | | | |
+| 18 | Download | Arm | | | |
+
+**Overall accuracy:** __ / 18 = __ %
+**Weakest class:** __
+
+### Q: The same object scored differently from the camera and from a downloaded picture. Give two reasons that come from your training data rather than from your code.
+
+1. **Every training sample came from one camera in one room.** All samples
+   were recorded with the laptop webcam at the lab desk: the same lighting,
+   white balance, background, resolution and lens. A phone photo is close to
+   that; a downloaded picture usually is not — studio lighting, a white or busy
+   background, a different angle, often heavy compression. The model learned
+   "a wallet *on our desk under our lamp*", so anything that changes the
+   scene moves the score even when the object is the same kind.
+2. **We trained on our specific objects, not on the category.** The Wallet
+   class is *our* wallet, the Phone class is *our* phone. A picture from the
+   internet shows a different wallet of a different colour and shape. With
+   only ~50 samples of one instance, the model never saw what varies inside
+   the category, so a different instance scores lower or is pulled toward
+   another class that happens to share its colour or shape.
+
+### Q: `classify` runs on the UI thread. How long does it take on your phone, and what does the user see during that time?
+
+> **TODO:** read the number on the phone — the Result screen prints
+> "Classified on the phone in N ms", measured with a `Stopwatch` inside
+> `Classifier.classify`.
+
+Measured: **__ ms** on __ (phone model).
+
+During that time the UI thread is busy, so no frame is drawn. `HomeShell`
+shows the *Classifying…* overlay and waits 50 ms before calling `classify`, so
+the overlay is on screen first; then the spinner **freezes** mid-turn for the
+whole inference, taps are ignored, and the Result screen appears when it
+finishes. Most of that time is the pure-Dart pre-processing (decode, rotate,
+crop, building a 224 × 224 × 3 nested list), not the model itself. Stretch
+goal 3 (`IsolateInterpreter`) would keep the spinner moving.
+
+## Checkpoint questions
+
+### 1. Trace one photo from the shutter button to the percentage on screen.
+
+| Step | Data | File |
+| --- | --- | --- |
+| Shutter in the system camera app | JPEG on the device, shrunk to ≤ 1024 px wide | `image_picker` (native) |
+| `pickImage` returns an `XFile`, `readAsBytes()` | `Uint8List` (encoded JPEG) | `lib/services/image_sources.dart` |
+| `_classify(ImageOrigin.camera, …)` | same `Uint8List` | `lib/screens/home_shell.dart` |
+| `img.decodeImage` | `img.Image` (decoded pixels) | `lib/services/classifier.dart` |
+| `bakeOrientation` + `copyResizeCropSquare(size: 224)` | 224 × 224 `img.Image`, upright, centre square | `classifier.dart` |
+| `value / 127.5 - 1` per channel | nested `List` shape `[1, 224, 224, 3]` of doubles in −1..1 | `classifier.dart` |
+| `_interpreter.run` | `[[p0 … p5]]`, shape `[1, 6]`, softmax, sums to 1 | `classifier.dart` (TFLite native) |
+| Pair index *i* with `labels[i]`, sort | `List<Prediction>` highest first | `classifier.dart` |
+| Wrap with bytes and source | `Classification`, added to `SessionHistory` | `lib/models/classification.dart`, `lib/services/session_history.dart` |
+| One row per prediction | `Prediction.percent` → `"86.4%"` next to a bar | `lib/screens/result_screen.dart`, `lib/widgets/prediction_bars.dart` |
+
+### 2. Which three lines of `pubspec.yaml` would break the app if deleted, and what would the error be?
+
+1. **`- assets/model/`** (under `assets:`) — the model and labels are no longer
+   bundled. The build succeeds, but at start-up `Interpreter.fromAsset` fails
+   with *Unable to load asset: "assets/model/model_unquant.tflite"*, which our
+   Welcome screen shows as "The model file could not be loaded." plus the
+   expected path.
+2. **`tflite_flutter: ^0.12.1`** — the package is gone, so compilation stops at
+   `classifier.dart`: *Error: Couldn't resolve the package 'tflite_flutter'*
+   / *Target of URI doesn't exist: 'package:tflite_flutter/tflite_flutter.dart'*.
+3. **`image: ^4.13.1`** — same kind of compile error in `classifier.dart`
+   for `package:image/image.dart`, and every `img.` call becomes undefined.
+
+(`image_picker` and `http` would break the build the same way in
+`image_sources.dart`.)
+
+### 3. Why must the pre-processing in Flutter match what Teachable Machine did during training? Name the two things that have to match.
+
+The network's weights were fitted to one exact kind of input. It has no idea
+what a "photo" is; it only sees numbers, and it gives good answers only for
+numbers that look like the ones it was trained on. If Flutter prepares the
+image differently, the model still runs and still returns six probabilities
+— just wrong ones, with no error anywhere.
+
+1. **Geometry:** a centred square crop resized to **224 × 224**, upright
+   (EXIF rotation applied), RGB channel order.
+2. **Value range:** each channel mapped from 0..255 to **−1..1**
+   (`value / 127.5 − 1`) for the floating-point model.
+
+### 4. Your model is 97 % sure that a shoe is a mug. Is that a bug? What does a percentage from this model mean, and what does it not mean?
+
+Not a bug — it is what this kind of model does. The output is a softmax over
+the six classes it knows, so the numbers always add up to 100 % across those
+six. 97 % means: *of the six things I was trained on, this picture is much
+closer to "mug" than to any other*. It does **not** mean "there is a 97 %
+chance this is a mug in the real world", and it says nothing about objects
+outside the six classes — there is no "unknown" output. The percentages are
+also not calibrated: high confidence on unfamiliar input is common. A
+background class, more varied training data, or a confidence threshold with
+an "I'm not sure" message reduce the problem but do not remove it.
+
+### 5. What stays on the device and what leaves it in this app? Compare with a cloud vision API.
+
+**Stays on the device:** the model and labels (bundled assets), every photo
+from the camera and gallery, the decoded pixels, the inference, the results
+and the History list (in memory only, gone when the app closes). Nothing is
+uploaded; classification works in airplane mode.
+
+**Leaves the device:** only the download source makes a network request — a
+`GET` to the address the user typed. That server learns the phone's IP address
+and that this image was requested; the image comes *in*, nothing goes out.
+
+**Cloud vision API:** the photo itself is uploaded to a third party. That
+needs a network, adds latency, usually costs money per request, and the
+provider may log or keep the image — a privacy question for photos of people
+(our "Zayniddin" and "Arm" classes). In exchange it recognises thousands of
+categories with a much larger model and gets better without an app update.
+On-device means private, offline, free and fast, but limited to our six
+classes and our phone's speed.

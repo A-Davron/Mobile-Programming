@@ -5,8 +5,10 @@ import 'package:flutter/services.dart' show rootBundle;
 
 import '../models/classification.dart';
 import '../services/classifier.dart';
+import '../services/image_sources.dart';
 import '../services/session_history.dart';
 import '../theme/app_theme.dart';
+import '../widgets/download_dialog.dart';
 import 'history_screen.dart';
 import 'home_screen.dart';
 import 'model_screen.dart';
@@ -28,8 +30,15 @@ class HomeShell extends StatefulWidget {
 class _HomeShellState extends State<HomeShell> {
   static const _sampleAsset = 'assets/model/sample.jpg';
 
+  final _sources = ImageSources();
   int _tab = 0;
   bool _busy = false;
+
+  @override
+  void dispose() {
+    _sources.close();
+    super.dispose();
+  }
 
   /// The single classification path. [loadBytes] returning null means the
   /// user cancelled: nothing happens and no error is shown.
@@ -58,6 +67,8 @@ class _HomeShellState extends State<HomeShell> {
       await Navigator.of(context).push(
         MaterialPageRoute<void>(builder: (_) => ResultScreen(classification: entry)),
       );
+    } on ImageSourceException catch (e) {
+      _showError(messenger, e.message);
     } on ClassifierException catch (e) {
       _showError(messenger, e.message);
     } catch (e) {
@@ -72,7 +83,7 @@ class _HomeShellState extends State<HomeShell> {
       ..showSnackBar(SnackBar(content: Text(message)));
   }
 
-  /// Placeholder source until Part 5: the bundled sample image.
+  /// Extra source for quick checks: the bundled sample image.
   Future<Uint8List?> _sampleBytes() async {
     try {
       final data = await rootBundle.load(_sampleAsset);
@@ -84,20 +95,14 @@ class _HomeShellState extends State<HomeShell> {
     }
   }
 
-  void _notConnectedYet(String source) {
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text('$source is not connected yet. Try the sample image.')));
-  }
-
   @override
   Widget build(BuildContext context) {
     final pages = [
       HomeScreen(
         history: widget.history,
-        onCamera: () => _notConnectedYet('The camera'),
-        onGallery: () => _notConnectedYet('The gallery'),
-        onDownload: () => _notConnectedYet('Downloading'),
+        onCamera: () => _classify(ImageOrigin.camera, _sources.fromCamera),
+        onGallery: () => _classify(ImageOrigin.gallery, _sources.fromGallery),
+        onDownload: () => _classify(ImageOrigin.download, () => showDownloadDialog(context, _sources)),
         onSample: () => _classify(ImageOrigin.sample, _sampleBytes),
       ),
       HistoryScreen(history: widget.history),
