@@ -138,3 +138,121 @@ pure, top-level function over a `String`, so it is unit-testable with no engine,
 no device and no model file — which is exactly what `test/labels_test.dart`
 exercises in T13. Everything untestable is pushed behind `Classifier.load()`
 and `classify`, and verified on a device instead.
+
+## Part 3 — The classifier: bytes in, percentages out
+
+`lib/services/classifier.dart` is the only file that knows TensorFlow Lite
+exists. Screens hand it a `Uint8List` and get back a `List<Prediction>` sorted
+from highest confidence to lowest; they never see a tensor.
+
+Three decisions worth recording:
+
+- **Normalisation is `value / 127.5 - 1`.** The exported floating-point model's
+  input tensor is `[1, 224, 224, 3]` float32 in the range −1 to 1, which is what
+  Teachable Machine trained on. A pixel channel is 0 to 255, so that expression
+  is the mapping between them.
+- **`bakeOrientation` before `copyResizeCropSquare`.** Phone cameras store the
+  rotation in EXIF rather than rotating the pixels. Baking it in first means a
+  portrait photo is not classified sideways; cropping to a centred 224×224
+  square then repeats what Teachable Machine did during training.
+- **Pair, then sort.** Index `i` of the output tensor belongs to line `i` of
+  `labels.txt`, so `Prediction` objects are built first and the list is sorted
+  afterwards. Sorting the raw numbers first would keep the order of the labels
+  and scramble which number belongs to which.
+
+`classify` also records `lastInference` with a `Stopwatch`, because inference
+runs on the UI thread and that duration is what the user actually waits
+through. The number is used again in Part 5.
+
+### T11 — how the single instance is shared
+
+Constructor injection, not a provider. `_TmClassifierAppState` in
+`lib/main.dart` calls `Classifier.load()` once in `initState`, holds the
+resulting instance in a field so `dispose` can call `close()`, and passes it
+down as a required constructor argument. A `FutureBuilder` gates the whole app:
+while the future is pending the loading screen shows, on failure
+`_StartupErrorScreen` shows, and only on success does a screen that needs the
+classifier get built.
+
+The reason for choosing injection over a Riverpod provider here is that the
+dependency is one object, created once, needed by a known set of screens, and
+owned for the whole life of the app. A provider would add a container and a
+lifecycle to reason about — and Lab 9 showed that `autoDispose` lifetimes are
+exactly where provider mistakes hide — without removing any wiring, because the
+screens would still have to read it. The cost of injection is that a new screen
+deep in the tree has to be threaded the argument; if Part 4 pushes the tree
+deeper than three levels, this is the decision to revisit.
+
+### T12 — failing politely
+
+Every failure path ends in a sentence the user can read plus a technical
+detail line, carried by `ClassifierException`:
+
+- A file that is not an image: `img.decodeImage` returns null, so `classify`
+  throws "That file is not an image we can read." The smoke-test page has a
+  **Classify a text file** button that feeds it `labels.txt` on purpose, and the
+  result is an error card, not a red screen and not a stuck spinner.
+- A missing or mistyped model path: `Classifier.load` catches the failure and
+  throws "The model file could not be loaded." with the detail naming the
+  expected path and the pubspec key, which `_StartupErrorScreen` shows instead
+  of the app. The paths live in `Classifier.modelAsset` and
+  `Classifier.labelsAsset`, so there is one place to typo and one place to fix.
+- A missing asset in general: `classifyAsset` reports which asset was expected
+  and that `assets/model/` is already declared, so the fix is to add the file
+  and rebuild.
+
+### T13 — what the tests found
+
+`test/labels_test.dart` has two tests and both pass, so **no fix to
+`parseLabels` was needed**. The awkward case —
+`'0 Mug\r\n1 Bottle\r\n2 Car keys\r\n\r\n'` — already works because of three
+things in the existing implementation: `line.trim()` removes the stray `\r`
+left by splitting CRLF on `\n` alone, the `if (line.trim().isNotEmpty)` guard
+drops the trailing blank line, and the regex `^\d+\s+` is anchored and applied
+with `replaceFirst`, so it removes only the leading index and leaves the space
+inside `Car keys` untouched.
+
+This matters for our own data: `labels.txt` line 3 is `3 Magic mouse`, so a
+label with a space is not a hypothetical edge case here.
+
+### Q: Change the normalisation to `value / 255` and classify the sample again. What happens to the percentages, and why does nothing crash?
+
+The percentages change and get worse, usually by collapsing most of the mass
+onto one or two classes that have little to do with the picture, and the top
+label is no longer reliably the right one.
+
+Nothing crashes because nothing the interpreter checks has changed. The input
+is still a float32 tensor of shape `[1, 224, 224, 3]`, which is the only thing
+`run` validates; `value / 255` just puts the numbers in 0..1 instead of −1..1.
+Every convolution still multiplies and adds, the final softmax still exponentiates
+and divides, and a softmax always returns a valid probability distribution — six
+numbers, none negative, summing to 1. So the app receives perfectly well-formed
+output that happens to be wrong. The failure is statistical, not structural: the
+features the network learned were measured on −1..1 inputs, and feeding it a
+different range shifts every activation in the first layer, which propagates. A
+wrong range is therefore the worst kind of bug in this app, because the only
+symptom is confident nonsense.
+
+### Q: Where in the whole app is the number of classes written down? What would you have to edit after retraining with a seventh class?
+
+Nowhere in the Dart code. The count exists in exactly two artefacts, and both
+are read at runtime:
+
+1. `assets/model/labels.txt` — one line per class. `parseLabels` turns it into
+   `Classifier.labels`, and `labels.length` sizes the output buffer
+   (`[List<double>.filled(labels.length, 0)]`) and bounds the loop that pairs
+   outputs to labels.
+2. `assets/model/model_unquant.tflite` — its output tensor shape, `[1, 6]` for
+   our current export, is baked into the graph.
+
+So after retraining with a seventh class the edit is: replace both files in
+`assets/model/` and rebuild. No Dart change, no constant to bump. Anything that
+displays the class list, including the Model screen in Part 4, picks the new
+label up for free.
+
+The thing to be careful about is that those two files must come from the *same*
+export. They are the one place the count is written down twice, and if
+`labels.txt` says seven while the model still outputs six, the output buffer is
+sized seven, `run` rejects the shape mismatch, and `classify` reports "The model
+could not read that image." That is also the argument for loading the labels
+from the same folder as the model, so the pair cannot drift apart.
