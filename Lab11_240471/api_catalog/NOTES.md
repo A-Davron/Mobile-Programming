@@ -28,3 +28,22 @@ Status **404 Not Found**, with a JSON body:
 ```
 
 The error response is still valid JSON. That is why the status code must be checked before parsing: otherwise this body would be passed to `Product.fromJson` and crash on missing keys.
+
+## Part 2 — Models from JSON
+
+All four models (`Dimensions`, `Product`, `Review`, `ProductPage`) are written by hand in `lib/models/`.
+
+**Decision for missing `tags` (T6):** a missing `tags` key becomes an **empty list** (`?? const []`). "No tags" and "empty tags" mean the same thing to the UI, so the field stays a non-nullable `List<String>` and widgets never need a null check. The same rule is used for `reviews`. A missing `brand` becomes `null`, because there is no sensible default brand.
+
+### What happens with `json['price'] as double` when the server sends `10`?
+
+`jsonDecode` turns `10` into an `int`, and an `int` is not a `double` in Dart. The cast throws
+`TypeError: type 'int' is not a subtype of type 'double' in type cast`.
+The error is found at **run time**, not compile time: `json['price']` is `dynamic`, so the compiler cannot know what the server will send. It works for `9.99` and crashes only for products whose price is a whole number. The fix is `(json['price'] as num).toDouble()`, which accepts both.
+
+### Why test `fromJson` with a saved file instead of a live request?
+
+- **Repeatable:** the file never changes, so the expected values (title, price, 3 reviews) stay true. Live data can change at any time.
+- **Isolated:** a failure means the parser is wrong, not that the network, the server or DummyJSON was down.
+- **Fast and offline:** it runs in milliseconds, works in CI and on a plane, and puts no load on the server.
+- **Edge cases on demand:** a hand-written map can test missing or odd fields that the live server may never send.
