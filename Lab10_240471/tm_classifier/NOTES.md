@@ -256,3 +256,100 @@ export. They are the one place the count is written down twice, and if
 sized seven, `run` rejects the shape mismatch, and `classify` reports "The model
 could not read that image." That is also the argument for loading the labels
 from the same folder as the model, so the pair cannot drift apart.
+
+## Part 4 — Five screens, one design
+
+### T14 — design credit
+
+| | |
+| --- | --- |
+| Name | Material 3 Design Kit |
+| Author | Material Design (Google) |
+| Link | https://www.figma.com/community/file/1035203688168086460 |
+| Licence | CC BY 4.0 (Figma Community) |
+
+The same values live in `lib/theme/design_credit.dart` and are shown on the
+Model screen. Values read from the kit's variables: primary `#6750A4`,
+surface `#FEF7FF`, surface container `#F3EDF7` (cards, navigation bar),
+surface container high `#ECE6F0`, secondary container `#E8DEF8` (chips, nav
+indicator), on surface `#1D1B20`, on surface variant `#49454F`, outline variant
+`#CAC4D0`; type in the M3 scale — title large 22/28 regular, title small and
+label large 14/20 medium, label medium 12/16 medium, body small 12/16 — and
+the kit's 12 px card corners, fully rounded buttons and pill nav indicator.
+
+Reference frames, exported from the kit's *Examples* page:
+`docs/design-1.png` is **Examples/Gallery-Mobile** (large title, tonal image
+cards, navigation bar) and `docs/design-2.png` is **Examples/Library-Mobile**
+(top app bar with back arrow, filter chips, thumbnail grid with title and
+subtitle). Home, History and Model follow the Gallery frame; Result follows the
+Library frame's top app bar and the title/subtitle pattern under thumbnails.
+
+### T15 — one theme file
+
+`lib/theme/app_theme.dart` holds the whole design: the palette (private to that
+file), a `ColorScheme`, a `TextTheme` with every text size, and component
+themes for app bar, cards, filled/outlined/text buttons, chips, the navigation
+bar, progress indicators, list tiles, inputs and snack bars. Spacing (4-point
+scale) and corner radii are `AppSpace` and `AppRadius` constants in the same
+file. Screens and widgets read colours and text styles only through
+`Theme.of(context)`: there is no `Color(0xFF…)` and no `fontSize` in
+`lib/screens/` or `lib/widgets/`.
+
+### T16 / T17 — screens and navigation
+
+| # | Screen | File | Notes |
+| --- | --- | --- | --- |
+| 1 | Welcome | `screens/welcome_screen.dart` | App name, one sentence, the labels as chips, **Get started**. It is also the loading screen (progress bar, button disabled) and the start-up error screen (names the missing file and where it was expected). |
+| 2 | Home | `screens/home_screen.dart` | Three separate action cards — Take a photo, Choose from gallery, Download an image — plus *Try the sample image* and the most recent result. |
+| 3 | Result | `screens/result_screen.dart` | Image centred with `BoxFit.contain`, at most half the screen high; one row per label with a bar and the percentage; top row emphasised; scrolls; the source is shown as a chip in the app bar. |
+| 4 | History | `screens/history_screen.dart` | Newest first: thumbnail, top label, percentage, source icon and time. Designed empty state. Tapping reopens the Result screen from the stored predictions, without running the model. |
+| 5 | Model | `screens/model_screen.dart` | Labels, number of classes, input size, file names, tensor shapes, the design credit, and a button to the Part 3 smoke test. |
+
+Navigation: *Get started* replaces Welcome with `HomeShell`
+(`screens/home_shell.dart`), which has a bottom `NavigationBar` for Home,
+History and Model inside an `IndexedStack`, so each tab keeps its scroll
+position. Result is pushed, so the back button returns to where you came from.
+
+`HomeShell` also owns the single classification path —
+bytes → `classify` → `SessionHistory.add` → push Result — so Part 5 only adds
+the three byte sources. Until then the camera, gallery and download cards show
+a "not connected yet" message and *Try the sample image* classifies
+`assets/model/sample.jpg` as placeholder data.
+
+Quality bar: every screen uses `SafeArea` and the shared page padding, so text
+never touches the edge; long content scrolls; buttons and cards use Material
+ink, so they have a pressed state; loading (Welcome, the *Classifying…*
+overlay), empty (Home "No result yet", History) and error (Welcome start-up
+error, snack bar on a failed classification) states are all designed.
+`test/screens_test.dart` renders Result, History and the Welcome error state on
+a 320×568 screen and fails on any overflow.
+
+### Q: Name two things in the Figma design that you changed or left out in Flutter, and why.
+
+1. **The Roboto font is not bundled.** The kit sets every style in Roboto.
+   The app keeps the M3 type scale (sizes and weights) but uses the platform
+   font: Roboto on Android already, San Francisco on iOS. Bundling Roboto would
+   add font files or the `google_fonts` package for no visible gain on the
+   Android phone we demo on.
+2. **No top app bars on the three tabs, and no FAB.** The kit's screens use a
+   small top app bar plus a floating action button for the main action. Home,
+   History and Model have a large page title in the body instead, and the three
+   sources are equal-weight cards rather than one FAB, because the lab requires
+   three *clearly separated* actions and a FAB would make one of them look more
+   important than the others. The Result screen does keep the kit's top app
+   bar, because it is a pushed screen that needs a back button.
+
+### Q: The Model screen shows the labels. Does it read them from the classifier or from the file again? Defend your choice.
+
+From the classifier: `ModelScreen` displays `classifier.labels`, the list
+`Classifier.load()` parsed once at start-up.
+
+That list is the one the model's output is actually paired with — index `i` of
+the output tensor becomes `labels[i]` in `classify`. Showing that same list
+means the Model screen describes exactly what the app will output, in the same
+order. Reading `labels.txt` a second time would show a copy that only matches
+by coincidence: it would need its own error handling for a missing file, it
+would repeat the parsing, and if the two ever disagreed the screen would be
+documenting something the classifier is not doing. It is also free: the list is
+already in memory and the Model screen already receives the classifier by
+constructor injection.

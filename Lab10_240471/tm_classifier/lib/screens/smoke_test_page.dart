@@ -7,7 +7,8 @@ import '../services/classifier.dart';
 /// label with its percentage to the console, and lets you feed it a text file
 /// to check that bad input ends in a message rather than a crash.
 ///
-/// Part 4 replaces this with the five designed screens.
+/// Since Part 4 it is reachable from the Model screen ("Run the smoke test"),
+/// so T10 and T12 can still be demonstrated.
 class SmokeTestPage extends StatefulWidget {
   const SmokeTestPage({super.key, required this.classifier});
 
